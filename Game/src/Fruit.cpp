@@ -24,9 +24,21 @@ void Fruit::Update(float dt)
 {
   // Calculate how much we're going to scale by for our pulsate effect.
   float scaleFactor = _scaleRate * dt;
-	_transform.scale.x += scaleFactor;
-	_transform.scale.y += scaleFactor;
-	_transform.scale.z += scaleFactor;
+
+  if (_transform.scale.x < _pulsateScale.x)
+  {
+	  _transform.scale.x = _pulsateScale.x - 0.01;
+  }
+
+  if (_transform.scale.y < _pulsateScale.y)
+  {
+	  _transform.scale.y = _pulsateScale.y - 0.01;
+  }
+
+
+  _transform.scale.x += scaleFactor;
+  _transform.scale.y += scaleFactor;
+  _transform.scale.z += scaleFactor;
 
   // If we've exceeded any bounds, then we need to flip and go in the opposite direction.
   if ((_isGrowing == true && _transform.scale.x >= _pulsateScale.y) ||

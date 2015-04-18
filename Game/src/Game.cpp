@@ -196,10 +196,6 @@ void Game::Reset()
 	char * randomNothingText = "";
 	printf("You've died! Press enter key to play again");
 	scanf("%c", &randomNothingText);
-	_fruit->GetTransform().position.x = -5.0;
-	_fruit->GetTransform().position.y = -2.0;
-	_fruit->GetTransform().scale.x = 0.50;
-	_fruit->GetTransform().scale.y = 0.50;
 }
 
 bool Game::getRunning()
