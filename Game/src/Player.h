@@ -32,14 +32,20 @@ public:
 
   void resetPlayer();
 
-  Vector3 returnHeadPosition();
+  Vector3 returnHeadPosition(int bod);
+  void SetHeadPosition(Vector3 position);
+  Vector3 GetHeadPosition();
+  int getNumCubes();
+  void setMoveSpeed(float speed);
 
 protected:
   std::vector<BodyNode *> _body;
   std::vector<BodyNode::Direction> _nextDirection;
   float _difference;
 
-  bool _newBodyPieceActive;
+  int _piecesToAdd;
+  int numCubes;
 
+  Graphics *g;
   float _moveSpeed;
 };

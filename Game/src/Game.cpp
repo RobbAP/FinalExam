@@ -45,6 +45,7 @@ void Game::InitializeImpl()
 {
 	srand(_deltaTime);
   SDL_SetWindowTitle(_window, "Game");
+  isRunning = true;
 
   float nearPlane = 0.01f;
   float farPlane = 100.0f;
@@ -73,59 +74,81 @@ void Game::InitializeImpl()
 
 void Game::UpdateImpl(float dt)
 {
-	// If a fruit is collected, update score and add a body
-	if (((_player->returnHeadPosition().x < (_fruit->GetTransform().position.x + 0.5)) && (_player->returnHeadPosition().x > _fruit->GetTransform().position.x - 0.5)) &&
-		((_player->returnHeadPosition().y < (_fruit->GetTransform().position.y + 0.5)) && (_player->returnHeadPosition().y > _fruit->GetTransform().position.y - 0.5))
-		)
+	if (isRunning)
 	{
-		_fruit->GetTransform().position.x = rand() % 9 + 1;
-		_fruit->GetTransform().position.y = rand() % 9 + 1;
-		_player->AddBodyPiece(_graphicsObject);
-		currentScore += 10;
-	}
+		// If a fruit is collected, update score and add a body
+		if (((_player->returnHeadPosition(0).x < (_fruit->GetTransform().position.x + 0.75)) && (_player->returnHeadPosition(0).x > _fruit->GetTransform().position.x - 0.75)) &&
+			((_player->returnHeadPosition(0).y < (_fruit->GetTransform().position.y + 0.75)) && (_player->returnHeadPosition(0).y > _fruit->GetTransform().position.y - 0.75))
+			)
+		{
+			_fruit->GetTransform().position.x = rand() % 9 + 1;
+			_fruit->GetTransform().position.y = rand() % 9 + 1;
+			_player->AddBodyPiece(_graphicsObject);
+			currentScore += 10;
+		}
 
-	// Do bounds checking.
-	if (_player->returnHeadPosition().x > 10 || _player->returnHeadPosition().x < -10 || _player->returnHeadPosition().y > 10 || _player->returnHeadPosition().y < -10)
-	{
-		currentScore = 0;
-		_player->resetPlayer();
+		// Do bounds checking.
+		if (_player->returnHeadPosition(0).x > 10 || _player->returnHeadPosition(0).x < -10 || _player->returnHeadPosition(0).y > 10 || _player->returnHeadPosition(0).y < -10)
+		{
+			currentScore = 0;
+			this->Reset();
+			_player->resetPlayer();
+			_player->SetHeadDirection(BodyNode::UP);
+			isRunning = true;
+		}
+
+		// Check if player collides with itself
+		for (int i = 2; i < _player->getNumCubes(); i++)
+		{
+			if ((_player->returnHeadPosition(0).x < (_player->returnHeadPosition(i).x + 0.75)) && (_player->returnHeadPosition(0).x > (_player->returnHeadPosition(i).x - 0.75)) &&
+				(_player->returnHeadPosition(0).y < (_player->returnHeadPosition(i).y + 0.75)) && (_player->returnHeadPosition(0).y > (_player->returnHeadPosition(i).y - 0.75))
+				)
+			{
+				currentScore = 0;
+				this->Reset();
+				_player->resetPlayer();
+				_player->SetHeadDirection(BodyNode::UP);
+				isRunning = true;
+			}
+		}
+
+		// Updated title
+		sprintf(buffer, "SNAKEEEE \t - \t Score : %i", currentScore);
+		SDL_SetWindowTitle(_window, buffer);
+		//printf("Player X : %f\n", _player->returnHeadPosition(0).x);
+		//printf("Player Y : %f\n", _player->returnHeadPosition(0).y);
+		//printf("Fruit X : %f\n", _fruit->GetTransform().position.x);
+		//printf("Fruit Y : %f\n", _fruit->GetTransform().position.y);
+
+	  InputManager::GetInstance()->Update(dt);
+
+	  // Check controls.
+	  if (InputManager::GetInstance()->IsKeyDown(SDLK_UP) == true)
+	  {
 		_player->SetHeadDirection(BodyNode::UP);
+		_player->setMoveSpeed(3.0);
+	  }
+	  else if (InputManager::GetInstance()->IsKeyDown(SDLK_DOWN) == true)
+	  {
+		_player->SetHeadDirection(BodyNode::DOWN);
+		_player->setMoveSpeed(3.0);
+	  }
+	  else if (InputManager::GetInstance()->IsKeyDown(SDLK_LEFT) == true)
+	  {
+		_player->SetHeadDirection(BodyNode::LEFT);
+		_player->setMoveSpeed(3.0);
+	  }
+	  else if (InputManager::GetInstance()->IsKeyDown(SDLK_RIGHT) == true)
+	  {
+		_player->SetHeadDirection(BodyNode::RIGHT);
+		_player->setMoveSpeed(3.0);
+	  }
+
+	  for (auto itr = _objects.begin(); itr != _objects.end(); itr++)
+	  {
+		(*itr)->Update(dt);
+	  }
 	}
-
-	// Updated title
-	sprintf(buffer, "SNAKEEEE \t - \t Score : %i", currentScore);
-	SDL_SetWindowTitle(_window, buffer);
-	printf("Player X : %f\n", _player->returnHeadPosition().x);
-	printf("Player Y : %f\n", _player->returnHeadPosition().y);
-	printf("Fruit X : %f\n", _fruit->GetTransform().position.x);
-	printf("Fruit Y : %f\n", _fruit->GetTransform().position.y);
-
-  InputManager::GetInstance()->Update(dt);
-
-  // Check controls.
-  if (InputManager::GetInstance()->IsKeyDown(SDLK_UP) == true)
-  {
-    _player->SetHeadDirection(BodyNode::UP);
-  }
-  else if (InputManager::GetInstance()->IsKeyDown(SDLK_DOWN) == true)
-  {
-    _player->SetHeadDirection(BodyNode::DOWN);
-  }
-  else if (InputManager::GetInstance()->IsKeyDown(SDLK_LEFT) == true)
-  {
-    _player->SetHeadDirection(BodyNode::LEFT);
-  }
-  else if (InputManager::GetInstance()->IsKeyDown(SDLK_RIGHT) == true)
-  {
-    _player->SetHeadDirection(BodyNode::RIGHT);
-  }
-
-  for (auto itr = _objects.begin(); itr != _objects.end(); itr++)
-  {
-    (*itr)->Update(dt);
-  }
-
-
 }
 
 void Game::DrawImpl(Graphics *graphics, float dt)
@@ -165,4 +188,21 @@ void Game::CalculateCameraViewpoint(Camera *camera)
   glRotatef(cross.z * dot, 0.0f, 0.0f, 1.0f);
 
   glTranslatef(-camera->GetPosition().x, -camera->GetPosition().y, -camera->GetPosition().z);
+}
+
+void Game::Reset()
+{
+	isRunning = false;
+	char * randomNothingText = "";
+	printf("You've died! Press enter key to play again");
+	scanf("%c", &randomNothingText);
+	_fruit->GetTransform().position.x = -5.0;
+	_fruit->GetTransform().position.y = -2.0;
+	_fruit->GetTransform().scale.x = 0.50;
+	_fruit->GetTransform().scale.y = 0.50;
+}
+
+bool Game::getRunning()
+{
+	return isRunning;
 }

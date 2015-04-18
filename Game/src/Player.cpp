@@ -20,6 +20,8 @@ void Player::Initialize(Graphics *graphics)
   head->Initialize(graphics);
   head->SetDirection(BodyNode::LEFT);
   head->moveSpeed = _moveSpeed;
+  head->active = true;
+  numCubes = 1;
 
   // Create first node for the player.
   _body.push_back(head);
@@ -28,8 +30,6 @@ void Player::Initialize(Graphics *graphics)
 
 void Player::AddBodyPiece(Graphics *graphics)
 {
-  _newBodyPieceActive = true;
-
   BodyNode *bodyPiece = new BodyNode();
   bodyPiece->Initialize(graphics);
   bodyPiece->moveSpeed = _moveSpeed;
@@ -41,6 +41,8 @@ void Player::AddBodyPiece(Graphics *graphics)
 
   // Add the node to our list.
   _body.push_back(bodyPiece);
+  numCubes++;
+  _piecesToAdd++;
 }
 
 void Player::SetHeadDirection(BodyNode::Direction direction)
@@ -68,19 +70,14 @@ const BodyNode::Direction& Player::GetHeadDirection()
   return _body[0]->GetDirection();
 }
 
-Vector3 Player::returnHeadPosition()
-{
-	return _body[0]->GetTransform().position;
-}
-
 void Player::Update(float dt)
 {
   bool canTurn = false;
 
   _difference += dt;
-  if (_difference > 1.0f)
+  if (_difference > 0.5f)
   {
-    _difference -= 1.0f;
+    _difference -= 0.5f;
     canTurn = true;
   }
 
@@ -123,7 +120,7 @@ void Player::Update(float dt)
 
       /* If we're at the last piece of the body and it's just been added, we don't want it to move until the previous piece is
        * far enough away so we don't risk colliding with it. */
-      if (bodyIndex == _body.size() - 1 && _newBodyPieceActive == false)
+      if (bodyIndex == _body.size() - 1 && currentNode->active == false)
       {
         Vector3 nextBodyPiecePosition = nextNode->GetTransform().position;
 
@@ -132,12 +129,34 @@ void Player::Update(float dt)
         // Make sure it's far enough away before we say it's okay.
         if (distance >= 1.0f)
         {
-          _newBodyPieceActive = true;
+          currentNode->active = true;
           currentNode->SetDirection(nextNode->GetDirection());
+
+          switch (nextNode->GetDirection())
+          {
+          case BodyNode::UP:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y - 1.0f;
+            break;
+          case BodyNode::DOWN:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y + 1.0f;
+            break;
+          case BodyNode::LEFT:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x + 1.0f;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y;
+            break;
+          case BodyNode::RIGHT:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x - 1.0f;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y;
+            break;
+          }
         }
       }
       else
       {
+        float nextNodeDifference = Vector3::Magnitude(Vector3::Difference(nextNode->GetTransform().position, currentNode->GetTransform().position));
+
         // Move other pieces.
         if (currentNode->directionChange.size() > 0)
         {
@@ -153,13 +172,40 @@ void Player::Update(float dt)
             currentNode->GetTransform().position = directionChange;
 
             // Ensure that we're far enough away from the previous node before moving.
-            float nextNodeDifference = Vector3::Magnitude(Vector3::Difference(nextNode->GetTransform().position, currentNode->GetTransform().position));
+            
             if (nextNodeDifference >= 1.0f)
             {
               currentNode->SetDirection(pair.direction);
               currentNode->directionChange.erase(currentNode->directionChange.begin());
             }
           }
+        }
+
+        if (nextNodeDifference > 1.25f)
+        {
+          switch (nextNode->GetDirection())
+          {
+          case BodyNode::UP:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y - 1.0f;
+            break;
+          case BodyNode::DOWN:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y + 1.0f;
+            break;
+          case BodyNode::LEFT:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x + 1.0f;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y;
+            break;
+          case BodyNode::RIGHT:
+            currentNode->GetTransform().position.x = nextNode->GetTransform().position.x - 1.0f;
+            currentNode->GetTransform().position.y = nextNode->GetTransform().position.y;
+            break;
+          }
+
+          currentNode->directionChange.clear();
+          currentNode->directionChange = nextNode->directionChange;
+          currentNode->SetDirection(nextNode->GetDirection());
         }
       }
     }
@@ -180,7 +226,35 @@ void Player::resetPlayer()
 {
 	_body.resize(1);
 	SetHeadDirection(BodyNode::UP);
+	numCubes = 1;
 	_body[0]->moveSpeed = 0;
 	_body[0]->GetTransform().position.x = 0;
 	_body[0]->GetTransform().position.y = 0;
+}
+
+void Player::SetHeadPosition(Vector3 position)
+{
+  Vector3 difference = Vector3::Difference(position, _body[0]->GetTransform().position);
+  for (int bodyIndex = 0; bodyIndex < _body.size(); bodyIndex++)
+  {
+    _body[bodyIndex]->GetTransform().position.x += difference.x;
+    _body[bodyIndex]->GetTransform().position.y += difference.y;
+    _body[bodyIndex]->GetTransform().position.z += difference.z;
+  }
+}
+
+Vector3 Player::returnHeadPosition(int bod)
+{
+	return _body[bod]->GetTransform().position;
+}
+
+int Player::getNumCubes()
+{
+	return numCubes;
+}
+
+void Player::setMoveSpeed(float speed)
+{
+	_moveSpeed = speed;
+	_body[0]->moveSpeed = _moveSpeed;
 }
